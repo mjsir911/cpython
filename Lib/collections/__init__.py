@@ -14,8 +14,8 @@ list, set, and tuple.
 
 '''
 
-__all__ = ['deque', 'defaultdict', 'namedtuple', 'UserDict', 'UserList',
-            'UserString', 'Counter', 'OrderedDict', 'ChainMap']
+__all__ = ['deque', 'defaultdict', 'NamedTuple', 'namedtuple', 'UserDict',
+            'UserList', 'UserString', 'Counter', 'OrderedDict', 'ChainMap']
 
 # For backwards compatibility, continue to make the collections ABCs
 # available through the collections module.
