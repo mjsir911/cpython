@@ -20,6 +20,7 @@ __all__ = ['deque', 'defaultdict', 'NamedTuple', 'namedtuple', 'UserDict',
 # For backwards compatibility, continue to make the collections ABCs
 # available through the collections module.
 from _collections_abc import *
+import abc
 import _collections_abc
 __all__ += _collections_abc.__all__
 
