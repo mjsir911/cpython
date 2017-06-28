@@ -374,8 +374,12 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
 
       >>> class Account(NamedTuple):
       ...     _fields = ('owner', 'balance', 'transaction_count')
+      ...     _defaults = {'owner': '<owner name>', 'balance': 0.0, 'transaction_count': 0}
 
-      >>> default_account = Account('<owner name>', 0.0, 0)
+      >>> Account()
+      Account(owner=<owner name>, balance=0.0, transaction_count=0)
+      >>> Account(balance=3.0, owner="Joe", transaction_count=2)
+      Account(owner=Joe, balance=3.0, transaction_count=2)
 
 
 
@@ -384,13 +388,18 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
     #__slots__ = ()
 
     _fields = ()
+    _defaults = {}
 
     def __new__(cls, *args, **kwargs):
         'Create new instance of {typename}({arg_list})'
-        args = dict(zip(cls._fields, args))
+        # For default arguments, use dict _defaults then override
+        args = {**cls._defaults, **dict(zip(cls._fields, args))}
         args.update(kwargs)
         if len(args) != len(cls._fields):
-            raise TypeError('Expected {num_fields:d} arguments, got %d' % len(result))
+            raise TypeError(
+            'Expected {} arguments, got {}'.format(
+                len(cls._fields), len(args)
+            ))
         result = super().__new__(cls, tuple(args.pop(key) for key in cls._fields))
         if args:
             raise ValueError('Got unexpected field names: {}'.format(args))
@@ -480,7 +489,8 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
         field_names = field_names.replace(',', ' ').split()
     field_names = tuple(map(str, field_names))
 
-    result = type(typename, (NamedTuple,), {'_fields': field_names})
+    result = type(typename, (NamedTuple,), {'_fields': field_names,
+        '_defaults': {}})
     return result
 
     typename = str(typename)
