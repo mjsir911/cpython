@@ -310,18 +310,44 @@ from collections import OrderedDict
 
 class NamedTuple(tuple, metaclass=abc.ABCMeta):
     """
-    >>> class Address(NamedTuple):
-    ...     ip: str
-    ...     port: int
-    ...     _fields = ('ip', 'port')
+      >>> class Address(NamedTuple):
+      ...     _fields = ('ip', 'port')
 
-    >>> z = Address('192.168.102.1', 7000)
-    >>> z
-    Address(ip=192.168.102.1, port=7000)
+      >>> Address('192.168.102.1', 7000)
+      Address(ip=192.168.102.1, port=7000)
+
+      >>> Address(ip='192.168.1.2', port=80)
+      Address(ip=192.168.1.2, port=80)
+
+      >>> Address(port=4, ip='192.168.2.1')
+      Address(ip=192.168.2.1, port=4)
+
+      >>> class Point(NamedTuple):
+      ...     _fields = ("x", "y")
+
+      >>> t = [11, 22]
+      >>> Point._make(t)
+      Point(x=11, y=22)
+
+      >>> p = Point(x=11, y=22)
+      >>> p._asdict()
+      OrderedDict([('x', 11), ('y', 22)])
+
+      >>> p = Point(x=11, y=22)
+      >>> p._replace(x=33)
+      Point(x=33, y=22)
+
+      >>> p._fields
+      ('x', 'y')
+
+      >>> class Color(NamedTuple):
+      ...     _fields = ('red', 'green', 'blue')
+
+      >>> class Pixel(Point, Color): pass
 
     """
 
-    __slots__ = ()
+    #__slots__ = ()
 
     _fields = ()
 
@@ -329,25 +355,35 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
         'Create new instance of {typename}({arg_list})'
         args = dict(zip(cls._fields, args))
         args.update(kwargs)
+        if len(args) != len(cls._fields):
+            raise TypeError('Expected {num_fields:d} arguments, got %d' % len(result))
         result = super().__new__(cls, tuple(args.pop(key) for key in cls._fields))
         if args:
             raise ValueError('Got unexpected field names: {}'.format(args))
         return result
 
-    # @classmethod
-    # def _make(cls, iterable, new=tuple.__new__, len=len):
-    #     'Make a new {typename} object from a sequence or iterable'
-    #     result = new(cls, iterable)
-    #     if len(result) != {num_fields:d}:
-    #         raise TypeError('Expected {num_fields:d} arguments, got %d' % len(result))
-    #     return result
+    @classmethod
+    def _make(cls, iterable, new=tuple.__new__, len=len):
+         'Make a new {typename} object from a sequence or iterable'
+         return cls(*iterable)
 
     @classmethod
     def __init_subclass__(cls):
         """ Change docstrings at runtime """
+        # Make sure not deduplicating subclassed fields
+        if cls._fields == cls.mro()[1]._fields:
+            cls._fields = ()
+
+        # Append parent's fields
+        cls._fields += tuple(f for m in cls.mro() if hasattr(m, '_fields') and m is not
+            cls for f in m._fields)
+
+        # Do docstring stuff
         if cls.__doc__ is None:
             cls.__doc__ = ''
-        cls.__doc__ += f'\n{cls.__name__}({", ".join(cls._fields)})'
+        else:
+            cls.__doc__ += '\n'
+        cls.__doc__ += f'{cls.__name__}({", ".join(cls._fields)})'
 
     def _replace(self, **values):
         'Return a new {typename} object replacing specified fields with new values'
@@ -408,6 +444,10 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
     if isinstance(field_names, str):
         field_names = field_names.replace(',', ' ').split()
     field_names = list(map(str, field_names))
+
+    result = type(typename, (NamedTuple,), {'_fields': field_names})
+    return result
+
     typename = str(typename)
     if rename:
         seen = set()
@@ -437,7 +477,6 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
         seen.add(name)
 
     # Subclass NamedTuple class
-    result = type(typename, (NamedTuple,), {'_fields': field_names})
 
     # For pickling to work, the __module__ variable needs to be set to the frame
     # where the named tuple is created.  Bypass this step in environments where
@@ -452,7 +491,6 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
     if module is not None:
         result.__module__ = module
 
-    return result
 
 
 ########################################################################
