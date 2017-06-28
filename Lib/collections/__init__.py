@@ -507,10 +507,22 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
 
     # Subclass NamedTuple class
     result = type(str(typename), (NamedTuple,), {'_fields': field_names})
+
+    # For pickling to work, the __module__ variable needs to be set to the frame
+    # where the named tuple is created.  Bypass this step in environments where
+    # sys._getframe is not defined (Jython for example) or sys._getframe is not
+    # defined for arguments greater than 0 (IronPython), or where the user has
+    # specified a particular module.
+
+    if module is None:
+        try:
+            module = _sys._getframe(1).f_globals.get('__name__', '__main__')
+        except (AttributeError, ValueError):
+            pass
+    if module is not None:
+        result.__module__ = module
+
     return result
-
-
-    # Um wat about pickling?
 
 
 
