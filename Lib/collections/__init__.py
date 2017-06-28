@@ -406,13 +406,6 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
         return result
 
     @classmethod
-    def _make(cls, iterable, new=tuple.__new__, len=len):
-         """
-         Make a new {} object from a sequence or iterable
-         """.format(cls.__name__)
-         return cls(*iterable)
-
-    @classmethod
     def __init_subclass__(cls):
         """ Dynamically change subclasses """
 
@@ -438,6 +431,13 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
         cls.__doc__ += '{name}({args})'.format(
             name=cls.__name__, args = ", ".join(cls._fields)
         )
+
+    @classmethod
+    def _make(cls, iterable, new=tuple.__new__, len=len):
+         """
+         Make a new {} object from a sequence or iterable
+         """.format(cls.__name__)
+         return cls(*iterable)
 
     def _replace(self, **values):
         """
