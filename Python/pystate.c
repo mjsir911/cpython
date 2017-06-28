@@ -111,12 +111,18 @@ PyInterpreterState_New(void)
         interp->importlib = NULL;
         interp->import_func = NULL;
         interp->eval_frame = _PyEval_EvalFrameDefault;
+        interp->co_extra_user_count = 0;
 #ifdef HAVE_DLOPEN
 #if HAVE_DECL_RTLD_NOW
         interp->dlopenflags = RTLD_NOW;
 #else
         interp->dlopenflags = RTLD_LAZY;
 #endif
+#endif
+#ifdef HAVE_FORK
+        interp->before_forkers = NULL;
+        interp->after_forkers_parent = NULL;
+        interp->after_forkers_child = NULL;
 #endif
 
         HEAD_LOCK();
@@ -159,6 +165,11 @@ PyInterpreterState_Clear(PyInterpreterState *interp)
     Py_CLEAR(interp->builtins_copy);
     Py_CLEAR(interp->importlib);
     Py_CLEAR(interp->import_func);
+#ifdef HAVE_FORK
+    Py_CLEAR(interp->before_forkers);
+    Py_CLEAR(interp->after_forkers_parent);
+    Py_CLEAR(interp->after_forkers_child);
+#endif
 }
 
 
@@ -271,7 +282,6 @@ new_threadstate(PyInterpreterState *interp, int init)
 
         tstate->coroutine_wrapper = NULL;
         tstate->in_coroutine_wrapper = 0;
-        tstate->co_extra_user_count = 0;
 
         tstate->async_gen_firstiter = NULL;
         tstate->async_gen_finalizer = NULL;
@@ -790,7 +800,7 @@ _PyGILState_Fini(void)
     autoInterpreterState = NULL;
 }
 
-/* Reset the TLS key - called by PyOS_AfterFork().
+/* Reset the TLS key - called by PyOS_AfterFork_Child().
  * This should not be necessary, but some - buggy - pthread implementations
  * don't reset TLS upon fork(), see issue #10517.
  */

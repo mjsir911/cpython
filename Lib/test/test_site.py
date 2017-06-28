@@ -180,6 +180,13 @@ class HelperFunctionsTests(unittest.TestCase):
         finally:
             pth_file.cleanup()
 
+    def test_getuserbase(self):
+        self.assertEqual(site._getuserbase(), sysconfig._getuserbase())
+
+    def test_get_path(self):
+        self.assertEqual(site._get_path(site._getuserbase()),
+                         sysconfig.get_path('purelib', os.name + '_user'))
+
     @unittest.skipUnless(site.ENABLE_USER_SITE, "requires access to PEP 370 "
                           "user-site (site.ENABLE_USER_SITE)")
     def test_s_option(self):
@@ -547,12 +554,16 @@ class _pthFileTests(unittest.TestCase):
         env = os.environ.copy()
         env['PYTHONPATH'] = 'from-env'
         env['PATH'] = '{};{}'.format(exe_prefix, os.getenv('PATH'))
-        rc = subprocess.call([exe_file, '-c',
-            'import sys; sys.exit(sys.flags.no_site and '
-            'len(sys.path) > 200 and '
-            'sys.path == %r)' % sys_path,
-            ], env=env)
-        self.assertTrue(rc, "sys.path is incorrect")
+        output = subprocess.check_output([exe_file, '-c',
+            'import sys; print("\\n".join(sys.path) if sys.flags.no_site else "")'
+        ], env=env, encoding='ansi')
+        actual_sys_path = output.rstrip().split('\n')
+        self.assert_(actual_sys_path, "sys.flags.no_site was False")
+        self.assertEqual(
+            actual_sys_path,
+            sys_path,
+            "sys.path is incorrect"
+        )
 
     def test_underpth_file(self):
         libpath = os.path.dirname(os.path.dirname(encodings.__file__))
