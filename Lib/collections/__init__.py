@@ -345,7 +345,9 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
     @classmethod
     def __init_subclass__(cls):
         """ Change docstrings at runtime """
-        cls.__doc__ = f'\n{cls.__name__}({", ".join(cls._fields)})'
+        if cls.__doc__ is None:
+            cls.__doc__ = ''
+        cls.__doc__ += f'\n{cls.__name__}({", ".join(cls._fields)})'
 
     def _replace(self, **values):
         'Return a new {typename} object replacing specified fields with new values'
