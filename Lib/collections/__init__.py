@@ -385,7 +385,7 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
 
     """
 
-    #__slots__ = ()
+    #__slots__ = () # unfortunately slots break multiple inheritance
 
     _fields = ()
     _defaults = {}
@@ -393,7 +393,9 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
     def __new__(cls, *args, **kwargs):
         'Create new instance of {typename}({arg_list})'
         # For default arguments, use dict _defaults then override
+        # Oh and turn args into a dict of fields
         args = {**cls._defaults, **dict(zip(cls._fields, args))}
+        # Add kwargs to args(which is now a dict)
         args.update(kwargs)
         if len(args) != len(cls._fields):
             raise TypeError(
@@ -407,12 +409,14 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
 
     @classmethod
     def _make(cls, iterable, new=tuple.__new__, len=len):
-         'Make a new {typename} object from a sequence or iterable'
+         """
+         Make a new {} object from a sequence or iterable
+         """.format(cls.__name__)
          return cls(*iterable)
 
     @classmethod
     def __init_subclass__(cls):
-        """ Change docstrings at runtime """
+        """ Dynamically change subclasses """
         # Make sure not deduplicating subclassed fields
         if cls._fields == cls.mro()[1]._fields:
             cls._fields = ()
@@ -427,10 +431,15 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
             cls.__doc__ = ''
         else:
             cls.__doc__ += '\n'
-        cls.__doc__ += f'{cls.__name__}({", ".join(cls._fields)})'
+        #cls.__doc__ += '{cls.__name__}({", ".join(cls._fields)})'
+        cls.__doc__ += '{name}({args})'.format(
+            name=cls.__name__, args = ", ".join(cls._fields)
+        )
 
     def _replace(self, **values):
-        'Return a new {typename} object replacing specified fields with new values'
+        """
+        Return a new {} object replacing specified fields with new values
+        """.format(type(self).__name__)
         cls = type(self)
         kwargs = self._asdict()
         kwargs.update(values)
