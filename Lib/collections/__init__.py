@@ -301,11 +301,9 @@ except ImportError:
 
 
 ################################################################################
-### namedtuple
+### NamedTuple
 ################################################################################
 
-from builtins import property as _property, tuple as _tuple
-from operator import itemgetter as _itemgetter
 from collections import OrderedDict
 
 class NamedTuple(tuple, metaclass=abc.ABCMeta):
@@ -417,6 +415,11 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
     @classmethod
     def __init_subclass__(cls):
         """ Dynamically change subclasses """
+
+        # check fields quickly
+        if len(set(cls._fields)) != len(cls._fields):
+            raise ValueError('Encountered duplicate field name: %r' % name)
+
         # Make sure not deduplicating subclassed fields
         if cls._fields == cls.mro()[1]._fields:
             cls._fields = ()
@@ -468,6 +471,10 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
         'Return self as a plain tuple.  Used by copy and pickle.'
         return tuple(self)
 
+################################################################################
+### namedtuple
+################################################################################
+
 def namedtuple(typename, field_names, *, verbose=False, rename=False, module=None):
     """Returns a new subclass of tuple with named fields.
 
@@ -498,52 +505,13 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
         field_names = field_names.replace(',', ' ').split()
     field_names = tuple(map(str, field_names))
 
-    result = type(typename, (NamedTuple,), {'_fields': field_names,
+    # Subclass NamedTuple class
+    result = type(str(typename), (NamedTuple,), {'_fields': field_names,
         '_defaults': {}})
     return result
 
-    typename = str(typename)
-    if rename:
-        seen = set()
-        for index, name in enumerate(field_names):
-            if (not name.isidentifier()
-                or _iskeyword(name)
-                or name.startswith('_')
-                or name in seen):
-                field_names[index] = '_%d' % index
-            seen.add(name)
-    for name in [typename] + field_names:
-        if type(name) is not str:
-            raise TypeError('Type names and field names must be strings')
-        if not name.isidentifier():
-            raise ValueError('Type names and field names must be valid '
-                             'identifiers: %r' % name)
-        if _iskeyword(name):
-            raise ValueError('Type names and field names cannot be a '
-                             'keyword: %r' % name)
-    seen = set()
-    for name in field_names:
-        if name.startswith('_') and not rename:
-            raise ValueError('Field names cannot start with an underscore: '
-                             '%r' % name)
-        if name in seen:
-            raise ValueError('Encountered duplicate field name: %r' % name)
-        seen.add(name)
 
-    # Subclass NamedTuple class
-
-    # For pickling to work, the __module__ variable needs to be set to the frame
-    # where the named tuple is created.  Bypass this step in environments where
-    # sys._getframe is not defined (Jython for example) or sys._getframe is not
-    # defined for arguments greater than 0 (IronPython), or where the user has
-    # specified a particular module.
-    if module is None:
-        try:
-            module = _sys._getframe(1).f_globals.get('__name__', '__main__')
-        except (AttributeError, ValueError):
-            pass
-    if module is not None:
-        result.__module__ = module
+    # Um wat about pickling?
 
 
 
