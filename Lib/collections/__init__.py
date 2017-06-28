@@ -344,6 +344,40 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
       ...     _fields = ('red', 'green', 'blue')
 
       >>> class Pixel(Point, Color): pass
+      >>> Pixel(11, 22, 128, 255, 0)
+      Pixel(x=11, y=22, red=128, green=255, blue=0)
+
+      >>> getattr(p, 'x')
+      11
+
+      >>> d = {'x': 11, 'y': 22}
+      >>> Point(**d)
+      Point(x=11, y=22)
+
+      >>> class Point(NamedTuple):
+      ...     _fields = ('x', 'y')
+      ...     @property
+      ...     def hypot(self):
+      ...         return (self.x ** 2 + self.y ** 2) ** 0.5
+      ...     def __str__(self):
+      ...         return 'Point: x=%6.3f  y=%6.3f  hypot=%6.3f' % (self.x, self.y, self.hypot)
+      >>> for p in Point(3, 4), Point(14, 5/7):
+      ...     print(p)
+      Point: x= 3.000  y= 4.000  hypot= 5.000
+      Point: x=14.000  y= 0.714  hypot=14.018
+
+      >>> class Point3D(Point):
+      ...     _fields = ('z',)
+
+      >>> Point3D._fields
+      ('x', 'y', 'z')
+
+      >>> class Account(NamedTuple):
+      ...     _fields = ('owner', 'balance', 'transaction_count')
+
+      >>> default_account = Account('<owner name>', 0.0, 0)
+
+
 
     """
 
@@ -375,8 +409,9 @@ class NamedTuple(tuple, metaclass=abc.ABCMeta):
             cls._fields = ()
 
         # Append parent's fields
-        cls._fields += tuple(f for m in cls.mro() if hasattr(m, '_fields') and m is not
-            cls for f in m._fields)
+        cls._fields = tuple(f for m in cls.mro() if hasattr(m, '_fields') and m is not
+            cls for f in m._fields) + cls._fields
+        # Should it concatentate or prepend?
 
         # Do docstring stuff
         if cls.__doc__ is None:
@@ -443,7 +478,7 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
     # message or automatically replace the field name with a valid name.
     if isinstance(field_names, str):
         field_names = field_names.replace(',', ' ').split()
-    field_names = list(map(str, field_names))
+    field_names = tuple(map(str, field_names))
 
     result = type(typename, (NamedTuple,), {'_fields': field_names})
     return result
