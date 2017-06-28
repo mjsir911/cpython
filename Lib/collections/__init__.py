@@ -506,8 +506,7 @@ def namedtuple(typename, field_names, *, verbose=False, rename=False, module=Non
     field_names = tuple(map(str, field_names))
 
     # Subclass NamedTuple class
-    result = type(str(typename), (NamedTuple,), {'_fields': field_names,
-        '_defaults': {}})
+    result = type(str(typename), (NamedTuple,), {'_fields': field_names})
     return result
 
 
